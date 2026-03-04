@@ -29,15 +29,21 @@ for patient in PATIENTS_AZT1D:
     df = df[['patient', 'datetime', 'glucose', 'carbohydrates', 'insulin', 'correction', 'hour', 'time']].copy()
     df = df.sort_values('datetime').reset_index(drop=True)
     
-    # Add prediction horizon features
-    for horizon in PREDICTION_HORIZONS:
-        df[f'glucose_{horizon}'] = df['glucose'].shift(-horizon) - df['glucose']
-    
-    # Add glucose change and projected features
-    df['glucose_change'] = df['glucose'] - df['glucose'].shift(1)
-    df['glucose_change_projected'] = df['glucose_change'].rolling(6, min_periods=6).apply(lambda window: get_projected_value(window, 6))
-    df['glucose_projected'] = df['glucose'].rolling(6, min_periods=6).apply(lambda window: get_projected_value(window, 6))
-    df = df.dropna(subset=[f'glucose_24'])
+    # Old row-based logic (kept for reference):
+    # for horizon in PREDICTION_HORIZONS:
+    #     df[f'glucose_{horizon}'] = df['glucose'].shift(-horizon) - df['glucose']
+    # df['glucose_change'] = df['glucose'] - df['glucose'].shift(1)
+    # df['glucose_change_projected'] = df['glucose_change'].rolling(6, min_periods=6).apply(lambda window: get_projected_value(window, 6))
+    # df['glucose_projected'] = df['glucose'].rolling(6, min_periods=6).apply(lambda window: get_projected_value(window, 6))
+    # df = df.dropna(subset=[f'glucose_24'])
+    df = build_segment_aware_glucose_features(
+        df,
+        glucose_col='glucose',
+        datetime_col='datetime',
+        horizons=PREDICTION_HORIZONS,
+        history_window=HISTORY_WINDOW_POINTS,
+        gap_threshold_min=SEGMENT_GAP_THRESHOLD_MINUTES,
+    )
     all_patients.append(df)
 features_to_remove = FEATURES_TO_REMOVE_AZT1D + PH_COLUMNS + ['patient_id']
 
@@ -190,8 +196,18 @@ for prediction_horizon in PREDICTION_HORIZONS:
     rmse1_ph = df1[df1['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
     rmse2_ph = df2[df2['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
     rmse3_ph = df3[df3['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
-    
-    print(f"AZT1D PH {prediction_horizon}: Glucose+Insulin {rmse1_ph:.4f}, +LastMeal {rmse2_ph:.4f}, Bezier {rmse3_ph:.4f}")
+    rmse1_std = df1[df1['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+    rmse2_std = df2[df2['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+    rmse3_std = df3[df3['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+
+    # 旧输出（只显示RMSE均值）
+    # print(f"AZT1D PH {prediction_horizon}: Glucose+Insulin {rmse1_ph:.4f}, +LastMeal {rmse2_ph:.4f}, Bezier {rmse3_ph:.4f}")
+    print(
+        f"PH {prediction_horizon}: "
+        f"Glucose+Insulin {rmse1_ph:.4f}±{rmse1_std:.4f}, "
+        f"+LastMeal {rmse2_ph:.4f}±{rmse2_std:.4f}, "
+        f"Bezier {rmse3_ph:.4f}±{rmse3_std:.4f}"
+    )
 
 # Combine all results into single file
 all_results = []

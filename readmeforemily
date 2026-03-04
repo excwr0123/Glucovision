@@ -1,0 +1,94 @@
+# Readme For Emily
+
+## 1) `check_d1namo_dataset.py`
+- 用途：检查 D1Namo 全部原始文件结构（`glucose/insulin/food/pixtral`），统计行数、列数、图片数、时间间隔概况。
+- 运行：
+  - `python check_d1namo_dataset.py`
+  - `python check_d1namo_dataset.py --gap-threshold 15`
+- 结果文件：
+  - 不写入 `results/`，只在终端打印。
+
+## 2) `check_d1namo_glucose.py`
+- 用途：只检查 D1Namo 的 `glucose.csv`，输出每个病人的：
+  - `total_rows`
+  - `rows_gt_5min`
+  - `rows_gt_5min_list`
+  - `has_missing_glucose`
+  - `duplicate_time`
+  - `max_gap_min`
+  - `monitoring_days`
+- 运行：`python check_d1namo_glucose.py`
+- 结果文件：
+  - 不写入 `results/`，只在终端打印。
+
+## 3) `check_azt1d_glucose.py`
+- 用途：只检查 AZT1D 的血糖时间序列，输出每个病人的：
+  - `total_rows`
+  - `rows_gt_5min`
+  - `has_missing_glucose`
+  - `duplicate_time`
+  - `max_gap_min`
+  - `monitoring_days`
+- 运行：`python check_azt1d_glucose.py`
+- 结果文件：
+  - 不写入 `results/`，只在终端打印。
+
+## 4) `check_segment_stats.py`
+- 用途：检查两个数据集在 `gap > threshold` 切分后的 segment 统计：
+  - `total_segments`
+  - `valid_segments`
+  - `invalid_segments`
+  - `valid_samples`
+  - `max_segment_len`
+- 运行：
+  - `python check_segment_stats.py`
+  - `python check_segment_stats.py --gap-threshold-min 5`
+- 结果文件：
+  - 不写入 `results/`，只在终端打印。
+
+## 5) `d1namo_segment_7030.py`
+- 用途：D1Namo 第一阶段实验脚本：
+  - 使用 **segment-aware 样本构造**
+  - 每位病人按时间顺序 **70% train / 30% test**
+  - 比较三种方式：`Glucose+Insulin` / `LastMeal` / `Bezier`
+  - 模型仍是 LightGBM
+- 运行：`python d1namo_segment_7030.py`
+- 结果文件：
+  - `results/d1namo_comparison_segment_7030.csv`
+
+## 6) `azt1d_segment_7030.py`
+- 用途：AZT1D 第一阶段实验脚本（和 D1Namo 版本同逻辑）：
+  - segment-aware
+  - 时间 70/30 切分
+  - 三种方式比较
+  - LightGBM
+- 运行：`python azt1d_segment_7030.py`
+- 结果文件：
+  - `results/azt1d_comparison_segment_7030.csv`
+
+## 7) `summarize_rmse_std.py`
+- 用途：把结果汇总成 `RMSE±Std`，并对比“原作者结果 vs 你的新结果”。
+- 默认输入：
+  - `results/d1namo_comparison.csv`（原始）
+  - `results/d1namo_comparison_segment_7030.csv`（新）
+- 运行：`python summarize_rmse_std.py`
+- 结果文件：
+  - `results/d1namo_rmse_std_comparison_segment_7030.csv`
+
+## 8) `d1namo_segment_stepwise_compare_params.py`
+- 用途：你后续对比实验脚本：
+  - 固定 **segment-aware + stepwise retrain**
+  - 对比两种参数模式：
+    1. `load_existing`（加载已有 Bezier 参数）
+    2. `reoptimize`（`LOAD_PARAMS=False` 强制重优化）
+- 运行：
+  - `python d1namo_segment_stepwise_compare_params.py --strict-existing`
+  - 快速试跑：`python d1namo_segment_stepwise_compare_params.py --strict-existing --n-trials 50`
+- 结果文件（默认前缀 `results/d1namo_segment_stepwise`）：
+  - `results/d1namo_segment_stepwise_load_existing.csv`
+  - `results/d1namo_segment_stepwise_reoptimize.csv`
+  - `results/d1namo_segment_stepwise_all_runs.csv`
+  - `results/d1namo_segment_stepwise_rmse_std_comparison.csv`
+
+---
+

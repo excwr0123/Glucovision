@@ -3,3 +3,11 @@ manuscript
 AZT1D 2025
 __pycache__
 .cursor
+# Local/editor/system
+.DS_Store
+.vscode/
+__pycache__/
+*.pyc
+
+# Heavy generated plots
+results/plots/

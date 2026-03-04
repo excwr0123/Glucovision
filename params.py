@@ -1,4 +1,25 @@
 
+import os
+import shutil
+
+
+def _resolve_lgbm_device():
+    """Resolve LightGBM device from env and runtime availability.
+
+    Env override:
+      - LGBM_DEVICE=cpu
+      - LGBM_DEVICE=gpu
+      - LGBM_DEVICE=auto (default)
+    """
+    requested = os.getenv("LGBM_DEVICE", "auto").strip().lower()
+    if requested in {"cpu", "gpu"}:
+        return requested
+    # auto: use GPU only when NVIDIA runtime seems available
+    return "gpu" if shutil.which("nvidia-smi") else "cpu"
+
+
+LGBM_DEVICE = _resolve_lgbm_device()
+
 # Patient IDs
 PATIENTS_D1NAMO = ['001', '002', '004', '006', '007', '008']
 PATIENTS_AZT1D = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
@@ -15,7 +36,7 @@ OPTIMIZATION_FEATURES_AZT1D = ['carbohydrates', 'insulin', 'correction']
 LGB_PARAMS = {
     'random_state': 42,
     'deterministic': True,
-    'num_threads': 1,
+    'num_threads': 8,
     'n_estimators': 100,
     'learning_rate': 0.1,
     'reg_lambda': 10,
@@ -23,6 +44,11 @@ LGB_PARAMS = {
     'data_sample_strategy': 'goss',
     'max_depth': 3,
 }
+
+if LGBM_DEVICE == "gpu":
+    # If GPU backend is unavailable in the installed LightGBM build,
+    # processing_functions.train_and_predict will automatically fall back to CPU.
+    LGB_PARAMS['device'] = 'gpu'
 
 # Monotone constraints mapping for feature names
 MONOTONE_MAP = {
@@ -35,8 +61,8 @@ MONOTONE_MAP = {
 }
 
 # Common feature sets to remove during prediction
-FEATURES_TO_REMOVE_D1NAMO = ['datetime', 'hour', 'patient_id'] + PH_COLUMNS
-FEATURES_TO_REMOVE_AZT1D = ['datetime', 'hour', 'patient'] + PH_COLUMNS
+FEATURES_TO_REMOVE_D1NAMO = ['datetime', 'hour', 'patient_id', '_segment_id'] + PH_COLUMNS
+FEATURES_TO_REMOVE_AZT1D = ['datetime', 'hour', 'patient', '_segment_id'] + PH_COLUMNS
 
 # Default prediction horizon for analysis (60 minutes)
 DEFAULT_PREDICTION_HORIZON = 12
@@ -46,7 +72,7 @@ GLUCOSE_CONVERSION_FACTOR = 18.0182
 
 # File paths
 D1NAMO_DATA_PATH = "diabetes_subset_pictures-glucose-food-insulin"
-AZT1D_DATA_PATH = "AZT1D 2025/CGM Records"
+AZT1D_DATA_PATH = "AZT1D/CGM Records"
 FOOD_DATA_PATH = "food_data/pixtral-large-latest"
 RESULTS_PATH = "results"
 
@@ -70,3 +96,5 @@ VALIDATION_SIZE = 0.2
 MAX_X_VALUES_FAST = 4.0
 MAX_X_VALUES_SLOW = 8.0
 STEP_SIZE = 12
+SEGMENT_GAP_THRESHOLD_MINUTES = 6.0
+HISTORY_WINDOW_POINTS = 6

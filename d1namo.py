@@ -21,8 +21,8 @@ print("Optimizing params per patient")
 patient_params = {}
 for p in PATIENTS_D1NAMO:
     g_df, c_df = patient_to_data[p]
-    train_days = g_df['datetime'].dt.day.unique()[:3]
-    g_train = g_df[g_df['datetime'].dt.day.isin(train_days)]
+    train_days = g_df['datetime'].dt.day.unique()[:3] #对每个病人取前三天做为参数学习数据
+    g_train = g_df[g_df['datetime'].dt.day.isin(train_days)] 
     c_train = c_df[c_df['datetime'].dt.day.isin(train_days)]
     patient_params[p] = optimize_params(
         f'd1namo_p{p}',
@@ -115,6 +115,7 @@ for prediction_horizon in PREDICTION_HORIZONS:
             ])
 
             indices = train_test_split(range(len(Xdf1)), test_size=VALIDATION_SIZE, random_state=RANDOM_SEED)
+            #目标病人权重10，其他病人权重1
             weights_train = [CURRENT_PATIENT_WEIGHT if Xdf1['patient_id'].iloc[idx] == f"patient_{patient}" else 1 for idx in indices[0]]
             weights_val = [CURRENT_PATIENT_WEIGHT if Xdf1['patient_id'].iloc[idx] == f"patient_{patient}" else 1 for idx in indices[1]]
 
@@ -142,8 +143,18 @@ for prediction_horizon in PREDICTION_HORIZONS:
     rmse1_ph = df1[df1['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
     rmse2_ph = df2[df2['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
     rmse3_ph = df3[df3['Prediction Horizon']==prediction_horizon]['RMSE'].mean()
-    
-    print(f"PH {prediction_horizon}: Glucose+Insulin {rmse1_ph:.4f}, +LastMeal {rmse2_ph:.4f}, Bezier {rmse3_ph:.4f}")
+    rmse1_std = df1[df1['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+    rmse2_std = df2[df2['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+    rmse3_std = df3[df3['Prediction Horizon']==prediction_horizon]['RMSE'].std()
+
+    # 旧输出（只显示RMSE均值）
+    # print(f"PH {prediction_horizon}: Glucose+Insulin {rmse1_ph:.4f}, +LastMeal {rmse2_ph:.4f}, Bezier {rmse3_ph:.4f}")
+    print(
+        f"PH {prediction_horizon}: "
+        f"Glucose+Insulin {rmse1_ph:.4f}±{rmse1_std:.4f}, "
+        f"+LastMeal {rmse2_ph:.4f}±{rmse2_std:.4f}, "
+        f"Bezier {rmse3_ph:.4f}±{rmse3_std:.4f}"
+    )
 
 # Combine all results into single file
 all_results = []
